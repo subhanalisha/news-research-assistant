@@ -82,10 +82,13 @@ def judge_answer(query: str, answer: str, chunks: list[dict], metric: str) -> di
     return result
 
 
-def run_answer_quality_evals(run_logs_dir: str = "evals/results") -> dict:
+def run_answer_quality_evals(run_logs_dir: str = None) -> dict:
     """Score all logged runs with LLM-as-judge."""
     import glob
     from pathlib import Path
+
+    if run_logs_dir is None:
+        run_logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 
     log_files = glob.glob(f"{run_logs_dir}/run_*.json")
     if not log_files:

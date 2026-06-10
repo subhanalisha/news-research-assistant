@@ -5,6 +5,7 @@ Measures: Tool call accuracy, avg tool calls/query, broaden trigger rate, halluc
 
 import json
 import glob
+import os
 
 
 EXPECTED_TOOL_PATTERNS = {
@@ -14,7 +15,9 @@ EXPECTED_TOOL_PATTERNS = {
 }
 
 
-def load_run_logs(run_logs_dir: str = "evals/results") -> list[dict]:
+def load_run_logs(run_logs_dir: str = None) -> list[dict]:
+    if run_logs_dir is None:
+        run_logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
     logs = []
     for f in glob.glob(f"{run_logs_dir}/run_*.json"):
         with open(f) as fh:
@@ -69,8 +72,10 @@ def hallucination_rate(logs: list[dict]) -> float:
     return bad / len(logs) if logs else 0.0
 
 
-def run_agent_behaviour_evals(eval_dataset_path: str = "data/eval_queries.json") -> dict:
+def run_agent_behaviour_evals(eval_dataset_path: str = None) -> dict:
     """Run all agent behaviour evals."""
+    if eval_dataset_path is None:
+        eval_dataset_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../data/eval_queries.json")
     with open(eval_dataset_path) as f:
         eval_dataset = json.load(f)
 

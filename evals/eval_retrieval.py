@@ -12,11 +12,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../ingestion"))
 from embedder import query_collection
 
 
-def load_eval_dataset(path: str = "data/eval_queries.json") -> list[dict]:
+def load_eval_dataset(path: str = None) -> list[dict]:
     """
     Load eval dataset. Each entry:
     { "query": str, "relevant_article_ids": [str, ...] }
     """
+    if path is None:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../data/eval_queries.json")
     with open(path) as f:
         return json.load(f)
 
