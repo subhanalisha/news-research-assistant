@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-CHROMA_PATH = "./chroma_db"
+# Always resolve chroma_db relative to this file, not the working directory
+CHROMA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chroma_db")
 COLLECTION_NAME = "news_articles"
 
 
@@ -46,12 +47,12 @@ def embed_and_store(chunks: list[dict]):
     ids = [c["chunk_id"] for c in chunks]
     documents = [c["text"] for c in chunks]
     metadatas = [{
-        "article_id": c["article_id"],
-        "chunk_index": c["chunk_index"],
-        "title": c["title"],
-        "source": c["source"],
-        "date": c["date"],
-        "url": c["url"],
+        "article_id": str(c.get("article_id") or ""),
+        "chunk_index": int(c.get("chunk_index") or 0),
+        "title": str(c.get("title") or ""),
+        "source": str(c.get("source") or ""),
+        "date": str(c.get("date") or ""),
+        "url": str(c.get("url") or ""),
     } for c in chunks]
 
     # Upsert in batches of 100

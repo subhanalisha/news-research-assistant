@@ -14,9 +14,11 @@ NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 
 # RSS feeds to pull from
 RSS_FEEDS = [
-    "https://feeds.feedburner.com/TechCrunch",
+    "https://techcrunch.com/feed/",
     "https://www.wired.com/feed/rss",
     "https://www.theverge.com/rss/index.xml",
+    "https://feeds.arstechnica.com/arstechnica/index",
+    "https://venturebeat.com/feed/",
 ]
 
 
@@ -72,7 +74,12 @@ def fetch_full_content(article: dict) -> dict:
 
 def fetch_all_articles() -> list[dict]:
     """Main entry point — fetch from all sources."""
-    articles = fetch_from_rss(RSS_FEEDS) + fetch_from_newsapi()
+    articles = (
+        fetch_from_rss(RSS_FEEDS)
+        + fetch_from_newsapi(query="OpenAI", page_size=20)
+        + fetch_from_newsapi(query="artificial intelligence", page_size=20)
+        + fetch_from_newsapi(query="technology startups", page_size=10)
+    )
     articles = [fetch_full_content(a) for a in articles if a["url"]]
     return articles
 
