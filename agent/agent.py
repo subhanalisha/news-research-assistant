@@ -21,7 +21,7 @@ Rules:
 1. Always call rewrite_query first to improve the search query.
 2. Call search_news with the rewritten query.
 3. If fewer than 5 chunks are returned, ALWAYS call broaden_search before continuing.
-4. If the query mentions 'latest', 'today', or 'recent', call filter_by_date(days=3).
+4. If the query mentions 'latest', 'today', or 'recent', call filter_by_date(days=7).
 5. Always call rerank_chunks after retrieval (after broaden_search if used) to re-order by relevance.
 6. Only call generate_summary when you have sufficient context (3+ chunks).
 7. Never answer from memory. Only use retrieved chunks.

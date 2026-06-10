@@ -95,11 +95,12 @@ def embed_and_store(parent_chunks: list[dict], child_chunks: list[dict]):
     print(f"[Embedder] Stored {len(child_chunks)} child chunks (embedded)")
 
 
-def query_collection(query: str, k: int = 6, filters: dict = None) -> list[dict]:
+def query_collection(query: str, k: int = 10, filters: dict = None) -> list[dict]:
     """
     Hierarchical retrieval:
     1. Search child chunks for precise matches
     2. Fetch their parent chunks for richer LLM context
+    Returns up to k unique parent chunks, preserving relevance score from child search.
     """
     child_col  = get_child_collection()
     parent_col = get_parent_collection()
@@ -114,26 +115,30 @@ def query_collection(query: str, k: int = 6, filters: dict = None) -> list[dict]
     if not results["ids"][0]:
         return []
 
-    # Step 2 — collect unique parent IDs
-    parent_ids = []
-    seen = set()
-    for meta in results["metadatas"][0]:
-        pid = meta.get("parent_id", "")
-        if pid and pid not in seen:
-            seen.add(pid)
-            parent_ids.append(pid)
+    # Step 2 — collect unique parent IDs, keeping best (lowest distance) score per parent
+    pid_to_score = {}
+    for j, meta in enumerate(results["metadatas"][0]):
+        pid   = meta.get("parent_id", "")
+        score = results["distances"][0][j]
+        if pid and (pid not in pid_to_score or score < pid_to_score[pid]):
+            pid_to_score[pid] = score
+
+    parent_ids = list(pid_to_score.keys())
 
     # Step 3 — fetch parent chunks for LLM context
     chunks = []
     if parent_ids:
         parent_results = parent_col.get(ids=parent_ids)
         for i in range(len(parent_results["ids"])):
+            pid = parent_results["ids"][i]
             chunks.append({
-                "chunk_id": parent_results["ids"][i],
+                "chunk_id": pid,
                 "text":     parent_results["documents"][i],
-                "score":    results["distances"][0][i] if i < len(results["distances"][0]) else 1.0,
+                "score":    pid_to_score.get(pid, 1.0),  # correct: child's score for this parent
                 **parent_results["metadatas"][i],
             })
+        # Sort by relevance (lower cosine distance = more relevant)
+        chunks.sort(key=lambda x: x["score"])
     else:
         # Fallback: return child chunks directly
         for i in range(len(results["ids"][0])):

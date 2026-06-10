@@ -25,29 +25,57 @@ def get_cross_encoder():
 
 # ── Tool implementations ──────────────────────────────────────────────────────
 
-def search_news(query: str, k: int = 6) -> list[dict]:
+def search_news(query: str, k: int = 10, **kwargs) -> list[dict]:
     """Embed query and retrieve top-k chunks from ChromaDB."""
     chunks = query_collection(query, k=k)
     print(f"[Tool: search_news] '{query}' → {len(chunks)} chunks")
     return chunks
 
 
-def filter_by_date(chunks: list[dict], days: int = 7) -> list[dict]:
-    """Filter chunks to articles published within the last N days."""
+def _parse_date(date_str: str):
+    """Parse dates in both ISO and RFC-2822 (RSS) formats. Returns datetime or None."""
+    if not date_str:
+        return None
+    # Try ISO 8601 first (NewsAPI: "2026-06-09T...")
+    try:
+        return datetime.fromisoformat(date_str.replace("Z", "+00:00")).replace(tzinfo=None)
+    except ValueError:
+        pass
+    # Try RFC 2822 (RSS: "Tue, 09 Jun 2026 14:30:00 GMT")
+    from email.utils import parsedate_to_datetime
+    try:
+        return parsedate_to_datetime(date_str).replace(tzinfo=None)
+    except Exception:
+        pass
+    return None
+
+
+def filter_by_date(chunks: list[dict], days: int = 7, **kwargs) -> list[dict]:
+    """Filter chunks to articles published within the last N days.
+    Handles both ISO 8601 and RFC 2822 date formats.
+    Falls back to original list if filtering leaves fewer than 3 chunks.
+    """
     cutoff = datetime.utcnow() - timedelta(days=days)
     filtered = []
+    unparseable = []
     for chunk in chunks:
-        try:
-            date = datetime.fromisoformat(chunk["date"].replace("Z", "+00:00"))
-            if date.replace(tzinfo=None) >= cutoff:
-                filtered.append(chunk)
-        except Exception:
-            filtered.append(chunk)  # keep if date unparseable
-    print(f"[Tool: filter_by_date] {len(chunks)} → {len(filtered)} chunks (last {days} days)")
-    return filtered
+        parsed = _parse_date(chunk.get("date", ""))
+        if parsed is None:
+            unparseable.append(chunk)   # can't determine date — keep separately
+        elif parsed >= cutoff:
+            filtered.append(chunk)
+
+    result = filtered + unparseable
+    # Safety net: never return fewer than 3 chunks (avoids over-filtering)
+    if len(result) < 3:
+        print(f"[Tool: filter_by_date] {len(chunks)} → {len(result)} chunks — "
+              f"too few, returning all {len(chunks)} original chunks")
+        return chunks
+    print(f"[Tool: filter_by_date] {len(chunks)} → {len(result)} chunks (last {days} days)")
+    return result
 
 
-def filter_by_source(chunks: list[dict], sources: list[str]) -> list[dict]:
+def filter_by_source(chunks: list[dict], sources: list[str], **kwargs) -> list[dict]:
     """Narrow results to specific news sources."""
     sources_lower = [s.lower() for s in sources]
     filtered = [c for c in chunks if c.get("source", "").lower() in sources_lower]
@@ -69,7 +97,7 @@ def fetch_full_article(article_id: str) -> str:
     return full_text
 
 
-def broaden_search(query: str, k: int = 12) -> list[dict]:
+def broaden_search(query: str, k: int = 20, **kwargs) -> list[dict]:
     """Re-run search with larger k when initial results are thin."""
     print(f"[Tool: broaden_search] Broadening search for '{query}' with k={k}")
     return query_collection(query, k=k)
@@ -128,39 +156,43 @@ def generate_summary(query: str, chunks: list[dict], **kwargs) -> str:
     if not chunks:
         return "No relevant articles found in the knowledge base."
 
-    # Deduplicate — keep highest-scoring chunk per article
-    seen = {}
+    # Deduplicate by chunk_id (NOT article_id) — preserves multiple parent chunks
+    # from the same article, which are different text segments with different content.
+    seen_ids = set()
+    unique_chunks = []
     for chunk in chunks:
-        aid = chunk.get("article_id") or chunk.get("chunk_id", str(id(chunk)))
-        if aid not in seen or chunk.get("score", 1) < seen[aid].get("score", 1):
-            seen[aid] = chunk
-    unique_chunks = list(seen.values())[:8]  # max 8 sources for richer context
+        cid = chunk.get("chunk_id", str(id(chunk)))
+        if cid not in seen_ids:
+            seen_ids.add(cid)
+            unique_chunks.append(chunk)
+    unique_chunks = unique_chunks[:12]  # up to 12 unique parent chunks
 
-    # Build context block
+    # Build numbered context block
     context = ""
     for i, chunk in enumerate(unique_chunks, 1):
         source = chunk.get("source") or "Unknown"
         date   = (chunk.get("date") or "")[:10]
+        title  = chunk.get("title") or ""
         text   = chunk.get("text") or ""
-        context += f"[{i}] {source}, {date}\n{text}\n\n"
+        context += f"[{i}] Source: {source} | Date: {date} | Title: {title}\n{text}\n\n"
 
-    prompt = f"""You are a careful news research assistant. Your job is to give a thorough, \
-factual answer using ONLY the provided articles below. Do NOT add any information from your \
-own training data or general knowledge.
+    num_articles = len(unique_chunks)
+    prompt = f"""Answer the question using ONLY the text in the articles below.
 
-Rules:
-- Cite every fact inline as [Source, Date].
-- Cover ALL relevant points from the articles — do not omit important details.
-- If conflicting information appears in different sources, note the discrepancy.
-- Structure the answer with a brief intro, key findings/facts, and a short conclusion.
-- If the question cannot be answered from the articles, say: \
-"The provided articles do not contain enough information to answer this question."
+Rules (follow strictly):
+1. Before writing any fact, verify the exact words appear in one of the articles.
+2. Prefer quoting or closely paraphrasing the article text over rewording.
+3. Every factual claim must be cited as [Article N — Source, Date].
+4. Do NOT add any name, number, product, or event that is not written in the article text.
+5. If an article is relevant, mention something from it. Skip only if truly irrelevant.
+6. End with: "Summary: [one sentence citing the main source]."
 
-Articles:
+ARTICLES:
 {context}
-Question: {query}
+QUESTION: {query}
 
-Comprehensive answer (with inline citations for every factual claim):"""
+GROUNDED ANSWER:"""
+
 
     import openai
     from dotenv import load_dotenv
@@ -168,15 +200,27 @@ Comprehensive answer (with inline citations for every factual claim):"""
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.chat.completions.create(
         model="gpt-5.4-mini",
-        max_completion_tokens=1024,
-        messages=[{"role": "user", "content": prompt}]
+        max_completion_tokens=1200,
+        temperature=0,   # deterministic — reduces hallucination
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a strict news research assistant. "
+                    "RULE: Only use words, names, and numbers that appear literally in the provided articles. "
+                    "If a detail is not in the article text, do not include it. "
+                    "When uncertain whether a detail is in the article, omit it."
+                )
+            },
+            {"role": "user", "content": prompt},
+        ]
     )
     answer = response.choices[0].message.content
     print(f"[Tool: generate_summary] Answer generated ({len(answer)} chars)")
     return answer
 
 
-def log_to_evals(query: str, chunks: list[dict], answer: str, scores: dict = None, tool_trace: list = None, **kwargs) -> None:
+def log_to_evals(query: str, chunks: list[dict], answer: str = "", scores: dict = None, tool_trace: list = None, **kwargs) -> None:
     """Persist run data to the eval harness for scoring."""
     import json
     from pathlib import Path
