@@ -111,7 +111,7 @@ Answer (with inline citations):"""
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.chat.completions.create(
         model="gpt-5.4-mini",
-        max_tokens=1024,
+        max_completion_tokens=1024,
         messages=[{"role": "user", "content": prompt}]
     )
     answer = response.choices[0].message.content

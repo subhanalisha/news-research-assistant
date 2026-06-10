@@ -64,7 +64,7 @@ def run_agent(user_query: str, verbose: bool = True) -> dict:
     while True:
         response = client.chat.completions.create(
             model="gpt-5.4-mini",
-            max_tokens=8096,
+            max_completion_tokens=8096,
             tools=OPENAI_TOOLS,
             tool_choice="auto",
             messages=messages,

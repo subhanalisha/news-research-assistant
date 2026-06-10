@@ -71,7 +71,7 @@ def judge_answer(query: str, answer: str, chunks: list[dict], metric: str) -> di
 
     response = client.chat.completions.create(
         model="gpt-5.4-nano",   # cheaper model for eval scoring
-        max_tokens=200,
+        max_completion_tokens=200,
         messages=[{"role": "user", "content": prompt}]
     )
 
