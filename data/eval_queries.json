@@ -2,26 +2,22 @@
   {
     "query": "What are the latest AI developments from OpenAI?",
     "relevant_article_ids": [
-      "a9ccec02-c0ca-4044-8c99-32831865b936",
-      "c906da48-6143-4477-b204-3c08c84694ab",
       "0753618d-4c56-4a2f-b8f0-1ad9881911c2",
-      "c8099229-ef2c-434c-934f-b6d70830f12f",
-      "3ed0ce61-08db-4522-ab69-15c9757a306e"
+      "a9ccec02-c0ca-4044-8c99-32831865b936",
+      "c8099229-ef2c-434c-934f-b6d70830f12f"
     ],
     "expected_pattern": "recency",
-    "notes": "OpenAI IPO, AI executive order, Greg Brockman, Google AI, Silicon Valley"
+    "notes": "Greg Brockman OpenAI, OpenAI IPO, Google AI subscription"
   },
   {
     "query": "What was announced at Apple WWDC 2026?",
     "relevant_article_ids": [
       "4586db61-c6f9-425c-9066-9d7837adbaf2",
       "f84f424b-c032-4427-bfcf-7ca95249010b",
-      "230eb7cf-d783-4aa6-8131-00853f9532fc",
-      "a60125b3-41ab-4179-84e7-fed0da533ab8",
-      "baf609fc-1379-464a-8e98-30ad7a57f796"
+      "230eb7cf-d783-4aa6-8131-00853f9532fc"
     ],
     "expected_pattern": "standard",
-    "notes": "WWDC 2026, Apple Silicon macOS 27, iOS 27, keynote"
+    "notes": "WWDC 2026 announcements, Apple keynote"
   },
   {
     "query": "Tell me about recent AI startup funding rounds",
@@ -29,35 +25,30 @@
       "edc60458-c84b-4b55-8aa6-1be8690dbf89",
       "b64a89d8-5a79-4e17-8467-3fbfceb6f374",
       "7046a2eb-106b-4fe7-8d2a-6fd0df75dea9",
-      "c8099229-ef2c-434c-934f-b6d70830f12f",
-      "8ebe924c-e23f-4b3c-800c-d8bf41a12f6c"
+      "c7cd41aa-f799-4396-9fbc-a8ca8570c836"
     ],
     "expected_pattern": "recency",
-    "notes": "Jack Altman AI startup, Seed 100, Justin Ernest, Google AI, Anthropic"
+    "notes": "Jack Altman, Seed 100, Justin Ernest investments"
   },
   {
     "query": "What is the latest news about Google I/O?",
     "relevant_article_ids": [
       "dae8e700-bfb7-450d-9fd8-3c1629a316f4",
-      "c8099229-ef2c-434c-934f-b6d70830f12f",
-      "b3fde2d4-8db9-42bc-a34b-9608447c0af3",
-      "5bea9292-d94d-4819-82a3-cadb2290cf79",
       "4586db61-c6f9-425c-9066-9d7837adbaf2"
     ],
     "expected_pattern": "standard",
-    "notes": "Google I/O, Google AI subscription, OpenAI Codex, App Store, WWDC"
+    "notes": "Google I/O watch guide, WWDC overlap"
   },
   {
     "query": "Latest news on quantum computing breakthroughs",
     "relevant_article_ids": [
       "443affe3-af53-4e0d-93f7-b3c4226cec08",
       "ccc37f5c-a7f4-4d24-9f59-494d9529d699",
-      "118e45b5-7966-44a9-9970-6d6da88d0d15",
       "7046a2eb-106b-4fe7-8d2a-6fd0df75dea9",
-      "d9f0a847-26a3-4193-b3fe-9c7fd1d52a3c"
+      "118e45b5-7966-44a9-9970-6d6da88d0d15"
     ],
     "expected_pattern": "thin_retrieval",
-    "notes": "UK AI supercomputer, AI consciousness, cheaper AI models, startups, Anthropic"
+    "notes": "UK AI supercomputer, AI consciousness, cheaper AI models"
   },
   {
     "query": "What is the latest news about autonomous vehicles and robotics?",
@@ -66,44 +57,45 @@
       "3ed0ce61-08db-4522-ab69-15c9757a306e"
     ],
     "expected_pattern": "thin_retrieval",
-    "notes": "Uber self-driving, Silicon Valley physical tech — thin retrieval triggers broaden_search"
+    "notes": "Uber self-driving, Silicon Valley physical tech"
   },
   {
     "query": "What did Greg Brockman announce at OpenAI recently?",
     "relevant_article_ids": [
       "0753618d-4c56-4a2f-b8f0-1ad9881911c2",
-      "a9ccec02-c0ca-4044-8c99-32831865b936",
-      "c906da48-6143-4477-b204-3c08c84694ab"
+      "6b2b9207-b26f-4fab-895f-0267f7103155"
     ],
     "expected_pattern": "standard",
-    "notes": "Specific factual query — improves faithfulness and completeness scores"
+    "notes": "Greg Brockman takes control of OpenAI products"
   },
   {
     "query": "What happened with macOS 27 and Apple Silicon requirements?",
     "relevant_article_ids": [
       "a60125b3-41ab-4179-84e7-fed0da533ab8",
-      "4586db61-c6f9-425c-9066-9d7837adbaf2",
-      "230eb7cf-d783-4aa6-8131-00853f9532fc"
+      "b3b50f66-a04b-47ef-8464-0485435bd272",
+      "5bea9292-d94d-4819-82a3-cadb2290cf79"
     ],
     "expected_pattern": "standard",
-    "notes": "Specific factual query — improves faithfulness and conciseness"
+    "notes": "macOS 27 drops Intel, Apple Silicon only"
   },
   {
     "query": "Tell me the very latest AI news from today",
     "relevant_article_ids": [
-      "c8099229-ef2c-434c-934f-b6d70830f12f",
-      "8ebe924c-e23f-4b3c-800c-d8bf41a12f6c",
-      "a9ccec02-c0ca-4044-8c99-32831865b936",
-      "0753618d-4c56-4a2f-b8f0-1ad9881911c2",
-      "d9f0a847-26a3-4193-b3fe-9c7fd1d52a3c"
+      "327482ef-c4ba-4f12-a472-61eb057921b7",
+      "34b2c989-3ad4-4349-9fa2-91c77daba97c",
+      "230eb7cf-d783-4aa6-8131-00853f9532fc",
+      "c906da48-6143-4477-b204-3c08c84694ab"
     ],
     "expected_pattern": "recency",
     "notes": "Contains 'today' — triggers filter_by_date(days=3)"
   },
   {
     "query": "What are the latest developments in space exploration and satellites?",
-    "relevant_article_ids": [],
+    "relevant_article_ids": [
+      "ee62459c-354a-45da-bad5-61d835bdf95a",
+      "fc5ac59e-2701-4555-9939-3e5166ccf171"
+    ],
     "expected_pattern": "thin_retrieval",
-    "notes": "Out-of-scope query — no space articles in DB, triggers broaden_search then graceful refusal"
+    "notes": "Thin results — triggers broaden_search"
   }
 ]

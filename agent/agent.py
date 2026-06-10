@@ -92,6 +92,10 @@ def run_agent(user_query: str, verbose: bool = True) -> dict:
             if verbose:
                 print(f"\n[Agent] → Calling: {tool_name}({json.dumps(tool_inputs)[:120]})")
 
+            # Inject tool_trace into log_to_evals so Layer 4 evals work
+            if tool_name == "log_to_evals":
+                tool_inputs["tool_trace"] = tool_trace
+
             # Execute tool
             result = execute_tool(tool_name, tool_inputs)
 

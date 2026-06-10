@@ -167,7 +167,7 @@ Answer (with inline citations):"""
     return answer
 
 
-def log_to_evals(query: str, chunks: list[dict], answer: str, scores: dict = None, **kwargs) -> None:
+def log_to_evals(query: str, chunks: list[dict], answer: str, scores: dict = None, tool_trace: list = None, **kwargs) -> None:
     """Persist run data to the eval harness for scoring."""
     import json
     from pathlib import Path
@@ -179,11 +179,12 @@ def log_to_evals(query: str, chunks: list[dict], answer: str, scores: dict = Non
     log_entry = {
         "timestamp": timestamp,
         "query": query,
-        "chunks_retrieved": chunks,          # full list for eval scoring
-        "chunks_count": len(chunks),         # count for quick reference
+        "chunks_retrieved": chunks,
+        "chunks_count": len(chunks),
         "answer": answer,
         "scores": scores or {},
         "sources": [c.get("source") for c in chunks],
+        "tool_trace": tool_trace or [],
     }
 
     log_file = log_dir / f"run_{timestamp}.json"
