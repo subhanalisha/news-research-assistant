@@ -75,7 +75,7 @@ def broaden_search(query: str, k: int = 12) -> list[dict]:
     return query_collection(query, k=k)
 
 
-def rerank_chunks(query: str, chunks: list[dict]) -> list[dict]:
+def rerank_chunks(query: str, chunks: list[dict], **kwargs) -> list[dict]:
     """Re-rank chunks using cross-encoder for higher precision."""
     if not chunks:
         return chunks
@@ -120,7 +120,7 @@ Rewritten:"""
     return rewritten
 
 
-def generate_summary(query: str, chunks: list[dict]) -> str:
+def generate_summary(query: str, chunks: list[dict], **kwargs) -> str:
     """Assemble context prompt and call the LLM to produce a cited answer."""
     from dotenv import load_dotenv
     load_dotenv()
@@ -167,7 +167,7 @@ Answer (with inline citations):"""
     return answer
 
 
-def log_to_evals(query: str, chunks: list[dict], answer: str, scores: dict = None) -> None:
+def log_to_evals(query: str, chunks: list[dict], answer: str, scores: dict = None, **kwargs) -> None:
     """Persist run data to the eval harness for scoring."""
     import json
     from pathlib import Path
