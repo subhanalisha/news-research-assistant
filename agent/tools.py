@@ -110,7 +110,7 @@ Answer (with inline citations):"""
     load_dotenv()
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5.4-mini",
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}]
     )
