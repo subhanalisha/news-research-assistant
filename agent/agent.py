@@ -3,12 +3,15 @@ Member B — Agentic Reasoning Loop
 Agent dynamically decides which MCP tools to call based on what it finds
 """
 
-import anthropic
 import json
+import openai
 from tools import MCP_TOOLS, execute_tool
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
+
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 SYSTEM_PROMPT = """You are a news research agent. You have access to these tools:
 search_news, filter_by_date, filter_by_source, fetch_full_article,
@@ -23,15 +26,33 @@ Rules:
 6. Always call log_to_evals after generating an answer.
 """
 
+# Convert MCP tool schema (Anthropic format) to OpenAI function format
+def to_openai_tools(mcp_tools: list) -> list:
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": t["name"],
+                "description": t["description"],
+                "parameters": t["input_schema"],
+            }
+        }
+        for t in mcp_tools
+    ]
+
+OPENAI_TOOLS = to_openai_tools(MCP_TOOLS)
+
 
 def run_agent(user_query: str, verbose: bool = True) -> dict:
     """
-    Main agent loop — runs until the agent reaches end_turn.
+    Main agent loop — runs until the agent stops calling tools.
     Returns: { answer, tool_trace, chunks_used }
     """
-    client = anthropic.Anthropic()
-    messages = [{"role": "user", "content": user_query}]
-    tool_trace = []
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user",   "content": user_query},
+    ]
+    tool_trace   = []
     final_chunks = []
     final_answer = ""
 
@@ -41,79 +62,61 @@ def run_agent(user_query: str, verbose: bool = True) -> dict:
         print(f"{'='*50}")
 
     while True:
-        response = client.messages.create(
-            model="claude-sonnet-4-5",
+        response = client.chat.completions.create(
+            model="gpt-4o",
             max_tokens=8096,
-            system=SYSTEM_PROMPT,
-            tools=MCP_TOOLS,
+            tools=OPENAI_TOOLS,
+            tool_choice="auto",
             messages=messages,
         )
 
-        # Check stop reason
-        if response.stop_reason == "end_turn":
-            # Extract final text answer
-            for block in response.content:
-                if hasattr(block, "text"):
-                    final_answer = block.text
+        msg = response.choices[0].message
+        finish_reason = response.choices[0].finish_reason
+
+        # No more tool calls — final answer
+        if finish_reason == "stop" or not msg.tool_calls:
+            final_answer = msg.content or ""
             if verbose:
                 print(f"\n[Agent] Final answer:\n{final_answer}")
             break
 
-        if response.stop_reason == "tool_use":
-            # Process all tool calls in this response
-            tool_results = []
+        # Process tool calls
+        messages.append(msg)  # add assistant message with tool_calls
 
-            for block in response.content:
-                if block.type != "tool_use":
-                    continue
+        for tool_call in msg.tool_calls:
+            tool_name   = tool_call.function.name
+            tool_inputs = json.loads(tool_call.function.arguments)
 
-                tool_name = block.name
-                tool_inputs = block.input
+            if verbose:
+                print(f"\n[Agent] → Calling: {tool_name}({json.dumps(tool_inputs)[:120]})")
 
-                if verbose:
-                    print(f"\n[Agent] → Calling: {tool_name}({json.dumps(tool_inputs)[:120]})")
+            # Execute tool
+            result = execute_tool(tool_name, tool_inputs)
 
-                # Execute the tool
-                result = execute_tool(tool_name, tool_inputs)
+            # Track
+            tool_trace.append({
+                "tool": tool_name,
+                "inputs": tool_inputs,
+                "result_preview": str(result)[:200],
+            })
 
-                # Track tool call
-                tool_trace.append({
-                    "tool": tool_name,
-                    "inputs": tool_inputs,
-                    "result_preview": str(result)[:200],
-                })
+            if tool_name in ("search_news", "broaden_search", "filter_by_date",
+                             "filter_by_source", "rerank_chunks"):
+                if isinstance(result, list):
+                    final_chunks = result
 
-                # Track chunks for eval logging
-                if tool_name in ("search_news", "broaden_search", "filter_by_date",
-                                 "filter_by_source", "rerank_chunks"):
-                    if isinstance(result, list):
-                        final_chunks = result
-
-                # Serialize result for message
-                if isinstance(result, (list, dict)):
-                    result_str = json.dumps(result)
-                else:
-                    result_str = str(result)
-
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": result_str,
-                })
-
-            # Feed tool results back to agent
-            messages.append({"role": "assistant", "content": response.content})
-            messages.append({"role": "user", "content": tool_results})
-
-        else:
-            # Unexpected stop reason
-            print(f"[Agent] Unexpected stop reason: {response.stop_reason}")
-            break
+            # Feed result back
+            result_str = json.dumps(result) if isinstance(result, (list, dict)) else str(result)
+            messages.append({
+                "role":         "tool",
+                "tool_call_id": tool_call.id,
+                "content":      result_str,
+            })
 
     return {
-        "query": user_query,
-        "answer": final_answer,
-        "tool_trace": tool_trace,
+        "query":       user_query,
+        "answer":      final_answer,
+        "tool_trace":  tool_trace,
         "chunks_used": final_chunks,
     }
 

@@ -77,7 +77,6 @@ def rerank_chunks(query: str, chunks: list[dict]) -> list[dict]:
 
 def generate_summary(query: str, chunks: list[dict]) -> str:
     """Assemble context prompt and call the LLM to produce a cited answer."""
-    import anthropic
     from dotenv import load_dotenv
     load_dotenv()
 
@@ -106,13 +105,16 @@ Question: {query}
 
 Answer (with inline citations):"""
 
-    client = anthropic.Anthropic()
-    response = client.messages.create(
-        model="claude-sonnet-4-5",
+    import openai
+    from dotenv import load_dotenv
+    load_dotenv()
+    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    response = client.chat.completions.create(
+        model="gpt-4o",
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}]
     )
-    answer = response.content[0].text
+    answer = response.choices[0].message.content
     print(f"[Tool: generate_summary] Answer generated ({len(answer)} chars)")
     return answer
 

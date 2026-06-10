@@ -4,10 +4,13 @@ Measures: Faithfulness, Relevance, Completeness, Conciseness
 """
 
 import json
-import anthropic
+import openai
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 METRICS = ["faithfulness", "relevance", "completeness", "conciseness"]
 
@@ -55,7 +58,6 @@ TARGETS = {
 
 def judge_answer(query: str, answer: str, chunks: list[dict], metric: str) -> dict:
     """Call LLM judge to score one metric."""
-    client = anthropic.Anthropic()
     rubric = METRIC_RUBRICS[metric]
     chunks_text = "\n".join([f"[{c.get('source','')}]: {c.get('text','')[:300]}" for c in chunks[:3]])
 
@@ -67,14 +69,14 @@ def judge_answer(query: str, answer: str, chunks: list[dict], metric: str) -> di
         **rubric,
     )
 
-    response = client.messages.create(
-        model="claude-haiku-4-5",
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",   # cheaper model for eval scoring
         max_tokens=200,
         messages=[{"role": "user", "content": prompt}]
     )
 
     try:
-        result = json.loads(response.content[0].text)
+        result = json.loads(response.choices[0].message.content)
     except Exception:
         result = {"score": 0, "reason": "Parse error"}
     return result
