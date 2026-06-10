@@ -8,7 +8,7 @@ import os
 from datetime import datetime, timedelta
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../ingestion"))
-from embedder import query_collection, get_collection
+from embedder import query_collection, get_parent_collection
 
 
 # ── Tool implementations ──────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ def filter_by_source(chunks: list[dict], sources: list[str]) -> list[dict]:
 
 def fetch_full_article(article_id: str) -> str:
     """Fetch all chunks for a given article_id and return joined text."""
-    collection = get_collection()
+    collection = get_parent_collection()
     results = collection.get(where={"article_id": article_id})
     if not results["documents"]:
         return "Article not found."

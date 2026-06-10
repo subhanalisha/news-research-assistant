@@ -26,13 +26,13 @@ def run_ingestion():
     # Step 2: Clean
     articles = clean_articles(articles)
 
-    # Step 3: Chunk
-    chunks = chunk_all_articles(articles)
+    # Step 3: Chunk (hierarchical — parents for context, children for retrieval)
+    parents, children = chunk_all_articles(articles)
 
     # Step 4 & 5: Embed + Store
-    embed_and_store(chunks)
+    embed_and_store(parents, children)
 
-    print(f"[Pipeline] Done. {len(chunks)} chunks now in ChromaDB.\n")
+    print(f"[Pipeline] Done. {len(parents)} parent + {len(children)} child chunks in ChromaDB.\n")
 
 
 def run_scheduled(interval_hours: int = 6):
