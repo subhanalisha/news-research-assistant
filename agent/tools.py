@@ -124,14 +124,15 @@ def log_to_evals(query: str, chunks: list[dict], answer: str, scores: dict = Non
     import json
     from pathlib import Path
 
-    log_dir = Path("../evals/results")
+    log_dir = Path(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../evals/results"))
     log_dir.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     log_entry = {
         "timestamp": timestamp,
         "query": query,
-        "chunks_retrieved": len(chunks),
+        "chunks_retrieved": chunks,          # full list for eval scoring
+        "chunks_count": len(chunks),         # count for quick reference
         "answer": answer,
         "scores": scores or {},
         "sources": [c.get("source") for c in chunks],
