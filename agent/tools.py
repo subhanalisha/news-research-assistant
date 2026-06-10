@@ -256,7 +256,7 @@ MCP_TOOLS = [
             "type": "object",
             "properties": {
                 "query": {"type": "string"},
-                "k": {"type": "integer", "default": 6}
+                "k": {"type": "integer", "default": 10}
             },
             "required": ["query"]
         }
@@ -303,7 +303,7 @@ MCP_TOOLS = [
             "type": "object",
             "properties": {
                 "query": {"type": "string"},
-                "k": {"type": "integer", "default": 12}
+                "k": {"type": "integer", "default": 20}
             },
             "required": ["query"]
         }
