@@ -59,7 +59,7 @@ TARGETS = {
 def judge_answer(query: str, answer: str, chunks: list[dict], metric: str) -> dict:
     """Call LLM judge to score one metric."""
     rubric = METRIC_RUBRICS[metric]
-    chunks_text = "\n".join([f"[{c.get('source','')}]: {c.get('text','')[:300]}" for c in chunks[:3]])
+    chunks_text = "\n".join([f"[{c.get('source','')}]: {c.get('text','')[:500]}" for c in chunks[:6]])
 
     prompt = JUDGE_PROMPT.format(
         metric_upper=metric.upper(),
@@ -71,7 +71,7 @@ def judge_answer(query: str, answer: str, chunks: list[dict], metric: str) -> di
 
     response = client.chat.completions.create(
         model="gpt-5.4-nano",   # cheaper model for eval scoring
-        max_completion_tokens=200,
+        max_completion_tokens=300,
         messages=[{"role": "user", "content": prompt}]
     )
 

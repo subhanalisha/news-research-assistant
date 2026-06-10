@@ -134,7 +134,7 @@ def generate_summary(query: str, chunks: list[dict], **kwargs) -> str:
         aid = chunk.get("article_id") or chunk.get("chunk_id", str(id(chunk)))
         if aid not in seen or chunk.get("score", 1) < seen[aid].get("score", 1):
             seen[aid] = chunk
-    unique_chunks = list(seen.values())[:5]  # max 5 sources
+    unique_chunks = list(seen.values())[:8]  # max 8 sources for richer context
 
     # Build context block
     context = ""
@@ -144,14 +144,23 @@ def generate_summary(query: str, chunks: list[dict], **kwargs) -> str:
         text   = chunk.get("text") or ""
         context += f"[{i}] {source}, {date}\n{text}\n\n"
 
-    prompt = f"""You are a research assistant. Answer using ONLY the articles below.
-Cite each source inline as [Source, Date]. If the answer is not in the articles, say so.
+    prompt = f"""You are a careful news research assistant. Your job is to give a thorough, \
+factual answer using ONLY the provided articles below. Do NOT add any information from your \
+own training data or general knowledge.
+
+Rules:
+- Cite every fact inline as [Source, Date].
+- Cover ALL relevant points from the articles — do not omit important details.
+- If conflicting information appears in different sources, note the discrepancy.
+- Structure the answer with a brief intro, key findings/facts, and a short conclusion.
+- If the question cannot be answered from the articles, say: \
+"The provided articles do not contain enough information to answer this question."
 
 Articles:
 {context}
 Question: {query}
 
-Answer (with inline citations):"""
+Comprehensive answer (with inline citations for every factual claim):"""
 
     import openai
     from dotenv import load_dotenv

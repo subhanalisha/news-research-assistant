@@ -8,10 +8,11 @@ import glob
 import os
 
 
+# Updated patterns to include rewrite_query and rerank_chunks (added in v2)
 EXPECTED_TOOL_PATTERNS = {
-    "standard": ["search_news", "generate_summary"],
-    "recency": ["search_news", "filter_by_date", "generate_summary"],
-    "thin_retrieval": ["search_news", "broaden_search", "generate_summary"],
+    "standard":      ["rewrite_query", "search_news", "rerank_chunks", "generate_summary"],
+    "recency":       ["rewrite_query", "search_news", "filter_by_date", "rerank_chunks", "generate_summary"],
+    "thin_retrieval":["rewrite_query", "search_news", "broaden_search", "rerank_chunks", "generate_summary"],
 }
 
 
@@ -19,7 +20,7 @@ def load_run_logs(run_logs_dir: str = None) -> list[dict]:
     if run_logs_dir is None:
         run_logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
     logs = []
-    for f in glob.glob(f"{run_logs_dir}/run_*.json"):
+    for f in sorted(glob.glob(f"{run_logs_dir}/run_*.json")):
         with open(f) as fh:
             logs.append(json.load(fh))
     return logs
@@ -28,14 +29,16 @@ def load_run_logs(run_logs_dir: str = None) -> list[dict]:
 def tool_call_accuracy(logs: list[dict], eval_dataset: list[dict]) -> float:
     """Check if agent called the right tools for each query type."""
     correct = 0
-    for log, item in zip(logs, eval_dataset):
+    total = min(len(logs), len(eval_dataset))
+    for i in range(total):
+        log  = logs[i]
+        item = eval_dataset[i]
         expected_pattern = item.get("expected_pattern", "standard")
-        expected_tools = EXPECTED_TOOL_PATTERNS.get(expected_pattern, [])
-        actual_tools = [step["tool"] for step in log.get("tool_trace", [])]
-        # Check all expected tools were called
+        expected_tools   = EXPECTED_TOOL_PATTERNS.get(expected_pattern, [])
+        actual_tools     = [step["tool"] for step in log.get("tool_trace", [])]
         if all(t in actual_tools for t in expected_tools):
             correct += 1
-    return correct / len(logs) if logs else 0.0
+    return correct / total if total else 0.0
 
 
 def avg_tool_calls(logs: list[dict]) -> float:
@@ -47,16 +50,19 @@ def avg_tool_calls(logs: list[dict]) -> float:
 
 
 def broaden_trigger_rate(logs: list[dict], eval_dataset: list[dict]) -> float:
-    """How often broaden_search was correctly triggered (when it should be)."""
-    should_broaden = [item for item in eval_dataset if item.get("expected_pattern") == "thin_retrieval"]
-    if not should_broaden:
+    """How often broaden_search was correctly triggered for thin_retrieval queries."""
+    thin_indices = [i for i, item in enumerate(eval_dataset)
+                    if item.get("expected_pattern") == "thin_retrieval"]
+    if not thin_indices:
         return 1.0
     triggered = 0
-    for log in logs[:len(should_broaden)]:
-        tools_used = [s["tool"] for s in log.get("tool_trace", [])]
+    for i in thin_indices:
+        if i >= len(logs):
+            continue
+        tools_used = [s["tool"] for s in logs[i].get("tool_trace", [])]
         if "broaden_search" in tools_used:
             triggered += 1
-    return triggered / len(should_broaden)
+    return triggered / len(thin_indices)
 
 
 def hallucination_rate(logs: list[dict]) -> float:
@@ -65,7 +71,7 @@ def hallucination_rate(logs: list[dict]) -> float:
     for log in logs:
         tools = [s["tool"] for s in log.get("tool_trace", [])]
         if "generate_summary" in tools:
-            first_search = next((i for i, t in enumerate(tools) if t == "search_news"), None)
+            first_search  = next((i for i, t in enumerate(tools) if t == "search_news"), None)
             first_summary = next((i for i, t in enumerate(tools) if t == "generate_summary"), None)
             if first_search is None or (first_summary is not None and first_summary < first_search):
                 bad += 1
@@ -85,17 +91,18 @@ def run_agent_behaviour_evals(eval_dataset_path: str = None) -> dict:
         return {}
 
     results = {
-        "tool_call_accuracy": round(tool_call_accuracy(logs, eval_dataset), 3),
+        "tool_call_accuracy":      round(tool_call_accuracy(logs, eval_dataset), 3),
         "avg_tool_calls_per_query": avg_tool_calls(logs),
-        "broaden_trigger_rate": round(broaden_trigger_rate(logs, eval_dataset), 3),
-        "hallucination_rate": round(hallucination_rate(logs), 3),
+        "broaden_trigger_rate":    round(broaden_trigger_rate(logs, eval_dataset), 3),
+        "hallucination_rate":      round(hallucination_rate(logs), 3),
     }
 
+    # Updated targets — avg_tool_calls is now 4-6 with rewrite_query + rerank_chunks
     targets = {
-        "tool_call_accuracy": 0.85,
-        "avg_tool_calls_per_query": None,   # target range: 2-4
-        "broaden_trigger_rate": 0.80,
-        "hallucination_rate": 0.0,
+        "tool_call_accuracy":      0.85,
+        "avg_tool_calls_per_query": None,   # range: 4-6
+        "broaden_trigger_rate":    0.80,
+        "hallucination_rate":      0.0,
     }
 
     print(f"\n{'='*50}")
@@ -106,8 +113,8 @@ def run_agent_behaviour_evals(eval_dataset_path: str = None) -> dict:
     for metric, score in results.items():
         target = targets[metric]
         if target is None:
-            status = "✅ Pass" if 2 <= score <= 4 else "⚠️  Check"
-            target_str = "2-4"
+            status = "✅ Pass" if 4 <= score <= 6 else "⚠️  Check"
+            target_str = "4-6"
         elif metric == "hallucination_rate":
             status = "✅ Pass" if score == 0.0 else "❌ Fail"
             target_str = "0%"
