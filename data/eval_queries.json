@@ -1,32 +1,51 @@
 [
   {
     "query": "What are the latest AI developments from OpenAI?",
-    "relevant_article_ids": [],
+    "relevant_article_ids": [
+      "a9ccec02-c0ca-4044-8c99-32831865b936",
+      "c906da48-6143-4477-b204-3c08c84694ab",
+      "3ed0ce61-08db-4522-ab69-15c9757a306e"
+    ],
     "expected_pattern": "recency",
-    "notes": "Fill relevant_article_ids after ingestion run"
+    "notes": "OpenAI IPO, AI executive order, Silicon Valley"
   },
   {
     "query": "What is happening with Apple's chip development?",
-    "relevant_article_ids": [],
+    "relevant_article_ids": [
+      "4586db61-c6f9-425c-9066-9d7837adbaf2",
+      "a60125b3-41ab-4179-84e7-fed0da533ab8",
+      "baf609fc-1379-464a-8e98-30ad7a57f796"
+    ],
     "expected_pattern": "standard",
-    "notes": ""
+    "notes": "WWDC 2026, macOS 27 Apple Silicon, iOS 27"
   },
   {
     "query": "Tell me about recent startup funding rounds in AI",
-    "relevant_article_ids": [],
+    "relevant_article_ids": [
+      "edc60458-c84b-4b55-8aa6-1be8690dbf89",
+      "b64a89d8-5a79-4e17-8467-3fbfceb6f374"
+    ],
     "expected_pattern": "recency",
-    "notes": ""
+    "notes": "Jack Altman AI sales startup, Seed 100 investors"
   },
   {
     "query": "What did TechCrunch report about Google this week?",
-    "relevant_article_ids": [],
+    "relevant_article_ids": [
+      "b3fde2d4-8db9-42bc-a34b-9608447c0af3",
+      "dae8e700-bfb7-450d-9fd8-3c1629a316f4",
+      "5bea9292-d94d-4819-82a3-cadb2290cf79"
+    ],
     "expected_pattern": "standard",
-    "notes": ""
+    "notes": "OpenAI Codex mobile, Google I/O, App Store bundles"
   },
   {
     "query": "Latest news on quantum computing breakthroughs",
-    "relevant_article_ids": [],
+    "relevant_article_ids": [
+      "443affe3-af53-4e0d-93f7-b3c4226cec08",
+      "ccc37f5c-a7f4-4d24-9f59-494d9529d699",
+      "7046a2eb-106b-4fe7-8d2a-6fd0df75dea9"
+    ],
     "expected_pattern": "thin_retrieval",
-    "notes": "May trigger broaden_search"
+    "notes": "UK AI supercomputer, AI consciousness, startup investments"
   }
 ]
