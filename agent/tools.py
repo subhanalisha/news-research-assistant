@@ -86,7 +86,7 @@ def generate_summary(query: str, chunks: list[dict]) -> str:
     # Deduplicate — keep highest-scoring chunk per article
     seen = {}
     for chunk in chunks:
-        aid = chunk.get("article_id", chunk["chunk_id"])
+        aid = chunk.get("article_id") or chunk.get("chunk_id", str(id(chunk)))
         if aid not in seen or chunk.get("score", 1) < seen[aid].get("score", 1):
             seen[aid] = chunk
     unique_chunks = list(seen.values())[:5]  # max 5 sources
@@ -94,7 +94,10 @@ def generate_summary(query: str, chunks: list[dict]) -> str:
     # Build context block
     context = ""
     for i, chunk in enumerate(unique_chunks, 1):
-        context += f"[{i}] {chunk['source']}, {chunk['date'][:10]}\n{chunk['text']}\n\n"
+        source = chunk.get("source") or "Unknown"
+        date   = (chunk.get("date") or "")[:10]
+        text   = chunk.get("text") or ""
+        context += f"[{i}] {source}, {date}\n{text}\n\n"
 
     prompt = f"""You are a research assistant. Answer using ONLY the articles below.
 Cite each source inline as [Source, Date]. If the answer is not in the articles, say so.
