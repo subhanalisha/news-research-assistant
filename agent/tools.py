@@ -10,6 +10,18 @@ from datetime import datetime, timedelta
 sys.path.append(os.path.join(os.path.dirname(__file__), "../ingestion"))
 from embedder import query_collection, get_parent_collection
 
+# ── Cross-encoder for reranking (lazy loaded on first use) ────────────────────
+_cross_encoder = None
+
+def get_cross_encoder():
+    global _cross_encoder
+    if _cross_encoder is None:
+        from sentence_transformers import CrossEncoder
+        print("[Reranker] Loading cross-encoder model...")
+        _cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+        print("[Reranker] Model loaded.")
+    return _cross_encoder
+
 
 # ── Tool implementations ──────────────────────────────────────────────────────
 
@@ -64,15 +76,48 @@ def broaden_search(query: str, k: int = 12) -> list[dict]:
 
 
 def rerank_chunks(query: str, chunks: list[dict]) -> list[dict]:
-    """Re-rank chunks by relevance score (simple keyword overlap for now)."""
-    # TODO: Replace with cross-encoder reranker for higher precision
-    query_words = set(query.lower().split())
-    for chunk in chunks:
-        text_words = set(chunk["text"].lower().split())
-        chunk["rerank_score"] = len(query_words & text_words) / max(len(query_words), 1)
-    reranked = sorted(chunks, key=lambda x: x.get("rerank_score", 0), reverse=True)
-    print(f"[Tool: rerank_chunks] Reranked {len(reranked)} chunks")
-    return reranked
+    """Re-rank chunks using cross-encoder for higher precision."""
+    if not chunks:
+        return chunks
+    try:
+        model = get_cross_encoder()
+        pairs = [(query, c.get("text", "")) for c in chunks]
+        scores = model.predict(pairs)
+        for chunk, score in zip(chunks, scores):
+            chunk["rerank_score"] = float(score)
+        reranked = sorted(chunks, key=lambda x: x.get("rerank_score", 0), reverse=True)
+        print(f"[Tool: rerank_chunks] Cross-encoder reranked {len(reranked)} chunks")
+        return reranked
+    except Exception as e:
+        print(f"[Tool: rerank_chunks] Cross-encoder failed ({e}), using keyword fallback")
+        query_words = set(query.lower().split())
+        for chunk in chunks:
+            text_words = set(chunk.get("text", "").lower().split())
+            chunk["rerank_score"] = len(query_words & text_words) / max(len(query_words), 1)
+        return sorted(chunks, key=lambda x: x.get("rerank_score", 0), reverse=True)
+
+
+def rewrite_query(query: str) -> str:
+    """Rewrite user query into a keyword-rich search query for better retrieval."""
+    import openai
+    from dotenv import load_dotenv
+    load_dotenv()
+    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    response = client.chat.completions.create(
+        model="gpt-5.4-nano",
+        max_completion_tokens=80,
+        messages=[{
+            "role": "user",
+            "content": f"""Rewrite this search query to improve news article retrieval.
+Make it more specific and keyword-rich. Return ONLY the rewritten query, nothing else.
+
+Original: {query}
+Rewritten:"""
+        }]
+    )
+    rewritten = response.choices[0].message.content.strip()
+    print(f"[Tool: rewrite_query] '{query}' → '{rewritten}'")
+    return rewritten
 
 
 def generate_summary(query: str, chunks: list[dict]) -> str:
@@ -210,6 +255,17 @@ MCP_TOOLS = [
         }
     },
     {
+        "name": "rewrite_query",
+        "description": "Rewrite the user query into a keyword-rich search query for better retrieval. Call this before search_news.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"}
+            },
+            "required": ["query"]
+        }
+    },
+    {
         "name": "rerank_chunks",
         "description": "Re-rank chunks using cross-encoder for higher precision.",
         "input_schema": {
@@ -256,6 +312,7 @@ TOOL_MAP = {
     "filter_by_source": filter_by_source,
     "fetch_full_article": fetch_full_article,
     "broaden_search": broaden_search,
+    "rewrite_query": rewrite_query,
     "rerank_chunks": rerank_chunks,
     "generate_summary": generate_summary,
     "log_to_evals": log_to_evals,

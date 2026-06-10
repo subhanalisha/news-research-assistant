@@ -14,16 +14,18 @@ load_dotenv()
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 SYSTEM_PROMPT = """You are a news research agent. You have access to these tools:
-search_news, filter_by_date, filter_by_source, fetch_full_article,
+rewrite_query, search_news, filter_by_date, filter_by_source, fetch_full_article,
 broaden_search, rerank_chunks, generate_summary, log_to_evals.
 
 Rules:
-1. Always call search_news first.
-2. If fewer than 3 chunks are returned, call broaden_search.
-3. If the query mentions 'latest', 'today', or 'recent', call filter_by_date(days=3).
-4. Only call generate_summary when you have sufficient context (3+ chunks).
-5. Never answer from memory. Only use retrieved chunks.
-6. Always call log_to_evals after generating an answer.
+1. Always call rewrite_query first to improve the search query.
+2. Call search_news with the rewritten query.
+3. If fewer than 3 chunks are returned, call broaden_search.
+4. If the query mentions 'latest', 'today', or 'recent', call filter_by_date(days=3).
+5. Always call rerank_chunks after retrieval to re-order by relevance.
+6. Only call generate_summary when you have sufficient context (3+ chunks).
+7. Never answer from memory. Only use retrieved chunks.
+8. Always call log_to_evals after generating an answer.
 """
 
 # Convert MCP tool schema (Anthropic format) to OpenAI function format
