@@ -104,6 +104,9 @@ def run_answer_quality_evals(run_logs_dir: str = None) -> dict:
         query = run["query"]
         answer = run["answer"]
         chunks = run.get("chunks_retrieved", [])
+        # Handle old log format where chunks_retrieved was saved as int
+        if not isinstance(chunks, list):
+            chunks = []
 
         for metric in METRICS:
             result = judge_answer(query, answer, chunks, metric)
